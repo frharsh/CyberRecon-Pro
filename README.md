@@ -14,7 +14,7 @@
 
 **CyberRecon Pro** is an advanced, automated reconnaissance platform designed for Security Analysts, SOC teams, and Penetration Testers. It orchestrates industry-standard security tools (Nmap, Subfinder, Amass, FFUF, WhatWeb) into a centralized, modern web interface.
 
-Built with Python and Flask, CyberRecon Pro features AI-assisted risk analysis, multi-threaded asynchronous scanning, PDF report generation, and a centralized Vulnerability Knowledge Base (VulnKB).
+Developed as a personal portfolio project, CyberRecon Pro features AI-assisted risk analysis, multi-threaded asynchronous scanning, PDF report generation, and a centralized Vulnerability Knowledge Base (VulnKB).
 
 ---
 
@@ -52,7 +52,7 @@ Ensure the following tools are installed on your host system and accessible in y
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/CyberRecon-Pro.git
+git clone https://github.com/frharsh/CyberRecon-Pro.git
 cd CyberRecon-Pro
 ```
 
@@ -96,6 +96,22 @@ This application has been developed with a "Secure by Design" philosophy:
 
 ---
 
+## 👤 Developer & About Me
+
+**Harsh Jadhav**
+* **Role:** Cybersecurity Student | Security Analyst Aspirant | VAPT & Reconnaissance Enthusiast
+* **GitHub:** [@frharsh](https://github.com/frharsh)
+* **LinkedIn:** [Harsh Jadhav](https://www.linkedin.com/in/harsh-jadhav-335795319/)
+
+### About the Developer
+I am an aspiring Security Analyst and VAPT enthusiast passionate about constructing practical tooling that automates complex security workflows. My primary areas of interest and learning include:
+*   **SOC Operations:** Understanding defensive workflows, threat analysis, log monitoring, and incident response orchestration.
+*   **VAPT (Vulnerability Assessment & Penetration Testing):** Discovering vulnerabilities, analyzing software weaknesses, and performing authorized web/network exploitation.
+*   **Reconnaissance:** Developing automated methods to map external attack surfaces and perform threat profiling.
+*   **Security Research:** Keeping up to date with the latest CVEs, OWASP methodologies, and secure coding practices.
+
+---
+
 ## ⚠️ Legal Disclaimer
 
 **For Educational and Authorized Security Testing Purposes Only.**
@@ -105,5 +121,5 @@ This tool is designed to assist security professionals in authorized vulnerabili
 ---
 
 <div align="center">
-  <i>Developed for the Cybersecurity Community</i>
+  <i>Developed with ❤️ by Harsh Jadhav</i>
 </div>
