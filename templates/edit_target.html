@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ target.name }} — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}targets / edit{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Edit <span>Target</span></h1>
+    <p class="page-subtitle mono">{{ target.name }}</p>
+  </div>
+  <a href="{{ url_for('target_detail', target_id=target.id) }}"
+     class="btn-cyber" style="border-color:var(--border);color:var(--text-secondary);">
+    <i class="fas fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="glass-card">
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('edit_target', target_id=target.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="name">Target Name *</label>
+              <input type="text" id="name" name="name" class="cyber-input"
+                     value="{{ target.name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="target_type">Type</label>
+              <select id="target_type" name="target_type" class="cyber-select">
+                {% for t in ['web','api','network','mobile','cloud','other'] %}
+                <option value="{{ t }}" {% if target.target_type == t %}selected{% endif %}>
+                  {{ t | capitalize }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="domain">Domain</label>
+              <input type="text" id="domain" name="domain" class="cyber-input"
+                     value="{{ target.domain or '' }}" placeholder="example.com">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="ip_address">IP / Range</label>
+              <input type="text" id="ip_address" name="ip_address" class="cyber-input"
+                     value="{{ target.ip_address or '' }}" placeholder="192.168.1.1">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-cyber" for="description">Description</label>
+            <textarea id="description" name="description" class="cyber-textarea" rows="3">{{ target.description or '' }}</textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="scope">In-Scope</label>
+              <textarea id="scope" name="scope" class="cyber-textarea" rows="4">{{ target.scope or '' }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="out_of_scope" style="color:var(--red);">Out-of-Scope</label>
+              <textarea id="out_of_scope" name="out_of_scope" class="cyber-textarea" rows="4"
+                        style="border-color:rgba(255,51,102,0.2);">{{ target.out_of_scope or '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label-cyber" for="status">Status</label>
+              <select id="status" name="status" class="cyber-select">
+                {% for s in ['active','pending','completed','archived'] %}
+                <option value="{{ s }}" {% if target.status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;
+                            padding:0.6rem;background:var(--bg-input);border:1px solid var(--border);
+                            border-radius:var(--radius-sm);width:100%;">
+                <input type="checkbox" name="bug_bounty" value="1"
+                       {% if target.bug_bounty %}checked{% endif %}
+                       style="accent-color:var(--cyan);">
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Bug Bounty Program</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.75rem;">
+            <button type="submit" class="btn-cyber btn-solid-cyan">
+              <i class="fas fa-save me-2"></i> Save Changes
+            </button>
+            <a href="{{ url_for('target_detail', target_id=target.id) }}"
+               class="btn-cyber" style="border-color:var(--border);color:var(--text-secondary);">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

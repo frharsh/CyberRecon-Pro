@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Reports — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}reports{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">PDF <span>Reports</span></h1>
+    <p class="page-subtitle">Generate and download professional security assessment reports</p>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Generate Report -->
+  <div class="col-lg-5">
+    <div class="glass-card mb-3">
+      <div class="card-body p-4">
+        <div class="section-title">Generate New Report</div>
+        <form method="POST" action="{{ url_for('generate_report') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label class="form-label-cyber" for="report-title">Report Title</label>
+            <input type="text" id="report-title" name="title" class="cyber-input"
+                   value="Security Assessment Report" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-cyber" for="report-target">Target</label>
+            <select id="report-target" name="target_id" class="cyber-select" required>
+              <option value="">— Select Target —</option>
+              {% for t in targets %}
+              <option value="{{ t.id }}"
+                {% if request.args.get('target_id')|int == t.id %}selected{% endif %}>
+                {{ t.name }} ({{ t.scans.filter_by(status='completed').count() }} completed scans)
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label-cyber">Include Sections</label>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+              {% for section_id, label in [
+                ('include_ports',     'Open Ports & Services'),
+                ('include_subdomains','Discovered Subdomains'),
+                ('include_dns',       'DNS Records'),
+                ('include_tech',      'Technology Stack'),
+                ('include_ai',        'AI Risk Analysis'),
+                ('include_recommendations', 'Recommendations'),
+              ] %}
+              <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;
+                            padding:0.5rem;background:var(--bg-input);
+                            border:1px solid var(--border-card);border-radius:var(--radius-sm);
+                            font-size:0.82rem;color:var(--text-secondary);">
+                <input type="checkbox" name="{{ section_id }}" value="1" checked
+                       style="accent-color:var(--cyan);">
+                <i class="fas fa-check-circle" style="color:var(--green);font-size:0.75rem;"></i>
+                {{ label }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn-cyber btn-solid-cyan w-100 justify-content-center" style="padding:0.75rem;">
+            <i class="fas fa-file-pdf me-2"></i> Generate PDF Report
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Report tips -->
+    <div class="glass-card" style="border-color:rgba(124,58,237,0.2);">
+      <div class="card-body p-3">
+        <div class="section-title" style="color:var(--purple);">
+          <i class="fas fa-circle-info me-1"></i> Report Contents
+        </div>
+        <ul style="font-size:0.8rem;color:var(--text-muted);padding-left:1.2rem;line-height:2;">
+          <li>Professional cover page with assessment metadata</li>
+          <li>Executive summary and scan overview</li>
+          <li>Detailed findings with risk ratings</li>
+          <li>AI-powered risk analysis per finding</li>
+          <li>Actionable remediation recommendations</li>
+          <li>Assessment methodology and legal disclaimer</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Reports -->
+  <div class="col-lg-7">
+    <div class="glass-card">
+      <div class="card-body p-0">
+        <div class="p-3" style="border-bottom:1px solid var(--border);">
+          <div class="section-title mb-0">Generated Reports</div>
+        </div>
+
+        {% if reports %}
+        <div style="padding:0.75rem;">
+          {% for report in reports %}
+          <div style="display:flex;align-items:center;gap:1rem;padding:0.85rem;
+                      background:var(--bg-input);border:1px solid var(--border-card);
+                      border-radius:var(--radius-md);margin-bottom:0.5rem;
+                      transition:all var(--transition);"
+               onmouseover="this.style.borderColor='rgba(0,212,255,0.2)'"
+               onmouseout="this.style.borderColor='var(--border-card)'">
+
+            <!-- Icon -->
+            <div style="width:44px;height:44px;border-radius:var(--radius-sm);
+                        background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.2);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fas fa-file-pdf" style="color:var(--red);font-size:1.1rem;"></i>
+            </div>
+
+            <!-- Info -->
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.85rem;color:var(--text-primary);
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {{ report.title }}
+              </div>
+              <div class="mono" style="font-size:0.68rem;color:var(--text-muted);">
+                {{ report.target.name if report.target else 'All Targets' }} ·
+                {{ report.created_at.strftime('%Y-%m-%d %H:%M') if report.created_at else '' }}
+              </div>
+            </div>
+
+            <!-- Size -->
+            <div class="mono" style="font-size:0.7rem;color:var(--text-muted);flex-shrink:0;">
+              PDF
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+              <a href="{{ url_for('download_report', filename=report.filename) }}"
+                 class="btn-cyber btn-cyan" style="padding:0.25rem 0.6rem;font-size:0.7rem;">
+                <i class="fas fa-download"></i>
+              </a>
+              <a href="{{ url_for('delete_report', rid=report.id) }}"
+                 class="btn-cyber btn-red" style="padding:0.25rem 0.6rem;font-size:0.7rem;"
+                 data-confirm="Delete this report?">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="text-center" style="padding:4rem;">
+          <i class="fas fa-file-pdf fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+          <p style="color:var(--text-muted);font-size:0.85rem;">
+            No reports generated yet. Select a target and generate your first report.
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

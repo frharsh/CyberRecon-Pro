@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Screenshots — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}screenshots{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Web <span>Screenshots</span></h1>
+    <p class="page-subtitle">Automated visual capture of target web applications</p>
+  </div>
+</div>
+
+<!-- Capture form -->
+<div class="glass-card mb-4">
+  <div class="card-body p-4">
+    <div class="section-title">Capture Screenshot</div>
+    <form method="POST" action="{{ url_for('capture_screenshot') }}" id="screenshot-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label-cyber" for="ss-url">Target URL</label>
+          <input type="text" id="ss-url" name="url" class="cyber-input"
+                 placeholder="https://example.com" required>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn-cyber btn-cyan w-100 justify-content-center"
+                  id="btn-capture" style="padding:0.65rem;">
+            <i class="fas fa-camera me-2"></i> Capture
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Screenshots grid -->
+{% if images %}
+<div class="row g-3">
+  {% for img in images %}
+  <div class="col-md-6 col-xl-4">
+    <div class="screenshot-card">
+      <!-- Image -->
+      <a href="{{ url_for('view_screenshot', filename=img) }}" target="_blank">
+        <img src="{{ url_for('view_screenshot', filename=img) }}"
+             alt="{{ img }}"
+             style="width:100%;height:180px;object-fit:cover;"
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22160%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%230a1628%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2300d4ff%22 font-size=%2212%22>No Preview</text></svg>'">
+      </a>
+
+      <div style="padding:0.75rem;">
+        <div style="font-size:0.78rem;color:var(--text-primary);white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;margin-bottom:0.4rem;font-family:var(--font-mono);">
+          {{ img }}
+        </div>
+        <div class="d-flex align-items-center justify-content-end gap-2">
+          <a href="{{ url_for('view_screenshot', filename=img) }}"
+             target="_blank" class="btn-cyber btn-cyan" style="padding:0.2rem 0.5rem;font-size:0.7rem;">
+            <i class="fas fa-expand"></i>
+          </a>
+          <a href="{{ url_for('delete_screenshot', filename=img) }}"
+             class="btn-cyber btn-red" style="padding:0.2rem 0.5rem;font-size:0.7rem;"
+             data-confirm="Delete this screenshot?">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="glass-card">
+  <div class="card-body text-center" style="padding:4rem;">
+    <i class="fas fa-camera fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+    <h3 style="font-family:var(--font-display);font-size:1rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+      No Screenshots Captured
+    </h3>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+      Use the form above to capture screenshots of target web applications.
+      <br>Requires Playwright (<code>playwright install chromium</code>).
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('screenshot-form')?.addEventListener('submit', function () {
+  const btn = document.getElementById('btn-capture');
+  btn.innerHTML = '<span class="spinner-cyber me-2" style="width:16px;height:16px;border-width:2px;display:inline-block;"></span> Capturing...';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

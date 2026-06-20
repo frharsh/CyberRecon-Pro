@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Vulnerability KB — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}vuln-kb{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Vulnerability <span>Knowledge Base</span></h1>
+    <p class="page-subtitle">Common vulnerabilities, attack techniques, and remediation reference</p>
+  </div>
+</div>
+
+<!-- Category filter -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <button class="btn-cyber btn-cyan filter-btn active" data-cat="all" style="padding:0.3rem 0.9rem;font-size:0.75rem;">All</button>
+  {% for cat in ['Network','Web','Authentication','Cryptography','Misconfiguration','Injection'] %}
+  <button class="btn-cyber filter-btn" data-cat="{{ cat }}"
+          style="padding:0.3rem 0.9rem;font-size:0.75rem;border-color:var(--border);color:var(--text-secondary);">
+    {{ cat }}
+  </button>
+  {% endfor %}
+</div>
+
+<!-- Search -->
+<div class="mb-4" style="max-width:400px;">
+  <input type="text" id="inline-search" class="cyber-input" placeholder="Search vulnerabilities...">
+</div>
+
+<!-- Vuln Cards -->
+<div id="vuln-list">
+{% for vuln in vulns %}
+<div class="vuln-card mb-3 vuln-entry" data-cat="{{ vuln.category }}"
+     data-searchable="{{ vuln.name }} {{ vuln.description }}">
+
+  <div class="vuln-header" onclick="toggleVuln({{ loop.index }})">
+    <div style="width:40px;height:40px;border-radius:var(--radius-sm);
+                background:{% if vuln.risk|lower == 'critical' %}var(--red-dim){% elif vuln.risk|lower == 'high' %}var(--orange-dim){% elif vuln.risk|lower == 'medium' %}var(--cyan-dim){% else %}var(--green-dim){% endif %};
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="fas fa-{{ vuln.icon or 'bug' }}"
+         style="color:{% if vuln.risk|lower == 'critical' %}var(--red){% elif vuln.risk|lower == 'high' %}var(--orange){% elif vuln.risk|lower == 'medium' %}var(--cyan){% else %}var(--green){% endif %};"></i>
+    </div>
+
+    <div style="flex:1;min-width:0;">
+      <div class="vuln-name">{{ vuln.name }}</div>
+      <div class="mono" style="font-size:0.7rem;color:var(--text-muted);">
+        {{ vuln.category }} · {% if vuln.cve_examples %}{{ vuln.cve_examples | join(', ') }}{% else %}General{% endif %}
+      </div>
+    </div>
+
+    <span class="risk-badge risk-{{ vuln.risk|lower }}">{{ vuln.risk | upper }}</span>
+
+    <div style="margin-left:0.5rem;color:var(--text-muted);font-size:0.8rem;"
+         id="chevron-{{ loop.index }}">
+      <i class="fas fa-chevron-down"></i>
+    </div>
+  </div>
+
+  <div class="vuln-body" id="vuln-body-{{ loop.index }}" style="display:none;">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="vuln-section-title">Description</div>
+        <p style="font-size:0.83rem;color:var(--text-secondary);line-height:1.7;margin-bottom:1rem;">{{ vuln.description }}</p>
+
+        {% if vuln.impact %}
+        <div class="vuln-section-title" style="color:var(--orange);">Impact</div>
+        <p style="font-size:0.83rem;color:var(--text-secondary);line-height:1.7;margin-bottom:1rem;">{{ vuln.impact }}</p>
+        {% endif %}
+
+        {% if vuln.testing %}
+        <div class="vuln-section-title" style="color:var(--cyan);">Verification & Testing</div>
+        <ul style="font-size:0.83rem;color:var(--text-secondary);padding-left:1.2rem;line-height:1.7;margin-bottom:1rem;">
+          {% for test in vuln.testing %}
+            <li>{{ test }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+
+      <div class="col-md-6">
+        {% if vuln.detection %}
+        <div class="vuln-section-title" style="color:var(--green);">Detection</div>
+        <ul style="font-size:0.83rem;color:var(--text-secondary);padding-left:1.2rem;line-height:1.7;margin-bottom:1rem;">
+          {% for det in vuln.detection %}
+            <li>{{ det }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if vuln.mitigation %}
+        <div class="vuln-section-title" style="color:var(--purple);">Mitigation</div>
+        <ul style="font-size:0.83rem;color:var(--text-secondary);padding-left:1.2rem;line-height:1.7;margin-bottom:1rem;">
+          {% for mit in vuln.mitigation %}
+            <li>{{ mit }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if vuln.tools %}
+        <div class="vuln-section-title">Recommended Tools</div>
+        <p class="mono text-cyan" style="font-size:0.8rem;margin-bottom:1rem;">
+          {{ vuln.tools | join(', ') }}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% else %}
+<div class="glass-card">
+  <div class="card-body text-center" style="padding:3rem;">
+    <i class="fas fa-database fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+    <p style="color:var(--text-muted);">Vulnerability knowledge base is loading...</p>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleVuln(idx) {
+  const body    = document.getElementById(`vuln-body-${idx}`);
+  const chevron = document.getElementById(`chevron-${idx}`);
+  const isOpen  = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  chevron.style.transition = 'transform 0.25s';
+}
+
+// Category filter
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('active', 'btn-cyan');
+      b.style.borderColor = 'var(--border)';
+      b.style.color = 'var(--text-secondary)';
+    });
+    this.classList.add('active', 'btn-cyan');
+    this.style.borderColor = '';
+    this.style.color = '';
+
+    const cat = this.dataset.cat;
+    document.querySelectorAll('.vuln-entry').forEach(el => {
+      el.style.display = (cat === 'all' || el.dataset.cat === cat) ? '' : 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

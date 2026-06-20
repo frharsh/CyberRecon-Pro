@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Results — {{ scan.tool | upper }} — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}recon / results / {{ scan.id }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Scan <span>Results</span></h1>
+    <p class="page-subtitle mono">
+      {{ scan.tool | upper }} · {{ scan.target.name }} ·
+      {{ scan.started_at.strftime('%Y-%m-%d %H:%M') if scan.started_at else '' }}
+    </p>
+  </div>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('generate_report') }}?scan_id={{ scan.id }}" class="btn-cyber btn-purple">
+      <i class="fas fa-file-pdf"></i> Export PDF
+    </a>
+    <a href="{{ url_for('recon') }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-plus"></i> New Scan
+    </a>
+    <a href="{{ url_for('history') }}" class="btn-cyber" style="border-color:var(--border);color:var(--text-secondary);">
+      <i class="fas fa-arrow-left"></i> History
+    </a>
+  </div>
+</div>
+
+<!-- Scan Meta -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon cyan"><i class="fas fa-magnifying-glass"></i></div>
+      <div class="stat-info">
+        <div class="stat-value">{{ results | length }}</div>
+        <div class="stat-label">Total Findings</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+      <div class="stat-info">
+        <div class="stat-value">{{ results | selectattr('risk_level','in',['critical','high']) | list | length }}</div>
+        <div class="stat-label">High Risk</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-clock"></i></div>
+      <div class="stat-info">
+        <div class="stat-value">
+          {% if scan.completed_at and scan.started_at %}
+            {{ ((scan.completed_at - scan.started_at).total_seconds() | int) }}s
+          {% else %}—{% endif %}
+        </div>
+        <div class="stat-label">Duration</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="fas fa-wrench"></i></div>
+      <div class="stat-info">
+        <div class="stat-value" style="font-size:1rem;">{{ scan.tool | upper }}</div>
+        <div class="stat-label">{{ scan.scan_type or 'Standard' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <button class="btn-cyber btn-cyan filter-btn active" data-filter="all" style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+    All ({{ results | length }})
+  </button>
+  {% for risk in ['critical','high','medium','low','informational'] %}
+  {% set count = results | selectattr('risk_level','equalto', risk) | list | length %}
+  {% if count > 0 %}
+  <button class="btn-cyber filter-btn risk-{{ risk }}" data-filter="{{ risk }}"
+          style="padding:0.3rem 0.75rem;font-size:0.75rem;border-color:var(--border);">
+    {{ risk | capitalize }} ({{ count }})
+  </button>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Results List -->
+{% if results %}
+<div id="results-container">
+  {% for result in results %}
+  {% set data = result.data | from_json %}
+  <div class="result-item mb-2 result-entry" data-risk="{{ result.risk_level }}">
+    <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+      <div style="flex:1;min-width:0;">
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <span class="risk-badge risk-{{ result.risk_level }}">{{ result.risk_level | upper }}</span>
+          <span class="risk-badge risk-info">{{ result.result_type | upper }}</span>
+
+          <!-- Result title varies by type -->
+          {% if result.result_type == 'port' %}
+            <span class="result-port">{{ data.port }}/{{ data.protocol or 'tcp' }}</span>
+            <span class="result-service">{{ data.service or '' }} {{ data.product or '' }} {{ data.version or '' }}</span>
+          {% elif result.result_type == 'subdomain' %}
+            <span class="mono" style="color:var(--green);">{{ data.subdomain or data.value }}</span>
+          {% elif result.result_type == 'dns' %}
+            <span class="mono" style="color:var(--cyan);">{{ data.record_type or data.type_label }}</span>
+            <span style="font-size:0.8rem;color:var(--text-secondary);">{{ data.domain }}</span>
+          {% elif result.result_type == 'tech' %}
+            <span class="mono" style="color:var(--purple);">{{ data.technology }}</span>
+            {% if data.version %}<span style="font-size:0.75rem;color:var(--text-muted);">v{{ data.version }}</span>{% endif %}
+          {% elif result.result_type == 'directory' %}
+            <span class="mono" style="color:var(--orange);">{{ data.path }}</span>
+            <span class="risk-badge risk-info">{{ data.status_code }}</span>
+          {% elif result.result_type == 'whois' %}
+            <span style="font-size:0.85rem;color:var(--text-primary);">{{ data.domain or 'WHOIS Record' }}</span>
+          {% else %}
+            <span style="font-size:0.85rem;color:var(--text-primary);">{{ result.result_type }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Extra details -->
+        {% if result.result_type == 'port' and data.script_output %}
+        <div class="terminal" style="margin-top:0.5rem;">
+          <div class="terminal-body" style="min-height:auto;max-height:100px;font-size:0.72rem;padding:0.5rem 0.75rem;">
+            {{ data.script_output[:300] }}{% if data.script_output|length > 300 %}...{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if result.result_type == 'dns' and data.values %}
+        <div class="mono" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem;">
+          {% for v in data.values[:5] %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% if data.values|length > 5 %} ... +{{ data.values|length - 5 }} more{% endif %}
+        </div>
+        {% endif %}
+
+        {% if result.result_type == 'whois' %}
+        <div style="margin-top:0.5rem;" class="row g-2">
+          {% if data.registrar %}<div class="col-auto"><span class="form-label-cyber">Registrar:</span> <span class="mono" style="font-size:0.75rem;color:var(--text-secondary);">{{ data.registrar }}</span></div>{% endif %}
+          {% if data.creation_date %}<div class="col-auto"><span class="form-label-cyber">Created:</span> <span class="mono" style="font-size:0.75rem;color:var(--text-secondary);">{{ data.creation_date }}</span></div>{% endif %}
+          {% if data.expiration_date %}<div class="col-auto"><span class="form-label-cyber">Expires:</span> <span class="mono" style="font-size:0.75rem;color:var(--text-secondary);">{{ data.expiration_date }}</span></div>{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- AI Analysis -->
+        {% if result.ai_analysis %}
+        <div class="ai-analysis-box">
+          <div class="ai-label"><i class="fas fa-robot me-1"></i> AI Risk Analysis</div>
+          {{ result.ai_analysis }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+        <button class="btn-cyber btn-cyan" style="padding:0.2rem 0.5rem;font-size:0.7rem;"
+                data-copy="{{ data | tojson }}" title="Copy raw data">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="glass-card">
+  <div class="card-body text-center" style="padding:3rem;">
+    <i class="fas fa-inbox fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+    <p style="color:var(--text-muted);">No results found for this scan.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    const filter = this.dataset.filter;
+    document.querySelectorAll('.result-entry').forEach(entry => {
+      if (filter === 'all' || entry.dataset.risk === filter) {
+        entry.style.display = '';
+      } else {
+        entry.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

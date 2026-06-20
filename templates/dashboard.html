@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}dashboard{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Security <span>Operations</span> Center</h1>
+    <p class="page-subtitle">
+      <span class="status-dot active"></span>
+      &nbsp;All systems operational &nbsp;|&nbsp;
+      <span class="mono" style="font-size:0.7rem;">{{ current_user.username }} · {{ current_user.role | upper }}</span>
+    </p>
+  </div>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('add_target') }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-plus"></i> New Target
+    </a>
+    <a href="{{ url_for('recon') }}" class="btn-cyber btn-purple">
+      <i class="fas fa-radar"></i> Launch Scan
+    </a>
+  </div>
+</div>
+
+<!-- ── Stat Widgets ──────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4 stagger">
+
+  <div class="col-6 col-xl-3">
+    <div class="stat-card animate-fade-up">
+      <div class="stat-icon cyan"><i class="fas fa-crosshairs"></i></div>
+      <div class="stat-info">
+        <div class="stat-value" data-counter="{{ stats.total_targets }}">0</div>
+        <div class="stat-label">Total Targets</div>
+        <div class="stat-change up"><i class="fas fa-arrow-up"></i> Active</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    <div class="stat-card animate-fade-up">
+      <div class="stat-icon purple"><i class="fas fa-radar"></i></div>
+      <div class="stat-info">
+        <div class="stat-value" data-counter="{{ stats.total_scans }}">0</div>
+        <div class="stat-label">Total Scans</div>
+        <div class="stat-change up"><i class="fas fa-arrow-up"></i> Executed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    <div class="stat-card animate-fade-up">
+      <div class="stat-icon green"><i class="fas fa-network-wired"></i></div>
+      <div class="stat-info">
+        <div class="stat-value" data-counter="{{ stats.open_ports }}">0</div>
+        <div class="stat-label">Open Ports</div>
+        <div class="stat-change" style="color:var(--orange);"><i class="fas fa-circle-exclamation"></i> Exposed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-xl-3">
+    <div class="stat-card animate-fade-up">
+      <div class="stat-icon red"><i class="fas fa-globe"></i></div>
+      <div class="stat-info">
+        <div class="stat-value" data-counter="{{ stats.subdomains }}">0</div>
+        <div class="stat-label">Subdomains</div>
+        <div class="stat-change" style="color:var(--cyan);"><i class="fas fa-magnifying-glass"></i> Found</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Charts Row ────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-lg-4">
+    <div class="glass-card h-100">
+      <div class="card-body p-3">
+        <div class="section-title mb-3">Tool Usage</div>
+        <div style="height:220px;">
+          <canvas id="toolsChart"
+            data-labels='{{ chart_data.tool_labels | tojson }}'
+            data-values='{{ chart_data.tool_values | tojson }}'></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="glass-card h-100">
+      <div class="card-body p-3">
+        <div class="section-title mb-3">Risk Distribution</div>
+        <div style="height:220px;">
+          <canvas id="riskChart"
+            data-labels='{{ chart_data.risk_labels | tojson }}'
+            data-values='{{ chart_data.risk_values | tojson }}'></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="glass-card h-100">
+      <div class="card-body p-3">
+        <div class="section-title mb-3">Scan Activity (7d)</div>
+        <div style="height:220px;">
+          <canvas id="timelineChart"
+            data-dates='{{ chart_data.timeline_dates | tojson }}'
+            data-counts='{{ chart_data.timeline_counts | tojson }}'></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Bottom Row: Recent Scans + Activities ─────────────────────────────── -->
+<div class="row g-3">
+
+  <!-- Recent Scans -->
+  <div class="col-lg-7">
+    <div class="glass-card">
+      <div class="card-body p-0">
+        <div class="p-3 pb-2" style="border-bottom:1px solid var(--border);">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="section-title mb-0">Recent Scans</div>
+            <a href="{{ url_for('history') }}" class="btn-cyber btn-cyan" style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+              View All <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="cyber-table">
+            <thead>
+              <tr>
+                <th>Target</th>
+                <th>Tool</th>
+                <th>Status</th>
+                <th>Findings</th>
+                <th>Time</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for scan in recent_scans %}
+              <tr>
+                <td>
+                  <span class="mono" style="font-size:0.8rem;">{{ scan.target.name }}</span>
+                </td>
+                <td>
+                  <span class="risk-badge risk-info">{{ scan.tool | upper }}</span>
+                </td>
+                <td>
+                  <span class="d-flex align-items-center gap-2">
+                    <span class="status-dot {{ scan.status }}"></span>
+                    <span style="font-size:0.78rem;">{{ scan.status | capitalize }}</span>
+                  </span>
+                </td>
+                <td>
+                  <span class="mono" style="color:var(--cyan);">{{ scan.results.count() }}</span>
+                </td>
+                <td>
+                  <span style="font-size:0.75rem;">
+                    {{ scan.started_at.strftime('%m/%d %H:%M') if scan.started_at else '—' }}
+                  </span>
+                </td>
+                <td>
+                  {% if scan.status == 'completed' %}
+                  <a href="{{ url_for('recon_results', scan_id=scan.id) }}" class="btn-cyber btn-cyan"
+                     style="padding:0.2rem 0.6rem;font-size:0.7rem;">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center" style="padding:2rem;color:var(--text-muted);">
+                  <i class="fas fa-radar fa-2x d-block mb-2" style="opacity:0.3;"></i>
+                  No scans yet — <a href="{{ url_for('recon') }}" style="color:var(--cyan);">launch your first scan</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Feed -->
+  <div class="col-lg-5">
+    <div class="glass-card h-100">
+      <div class="card-body p-3">
+        <div class="section-title">Activity Feed</div>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;max-height:340px;overflow-y:auto;">
+          {% for act in activities %}
+          <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.6rem;
+                      background:var(--bg-input);border-radius:var(--radius-sm);
+                      border:1px solid var(--border-card);">
+            <div style="width:30px;height:30px;border-radius:50%;
+                        background:var(--cyan-dim);display:flex;align-items:center;justify-content:center;
+                        flex-shrink:0;font-size:0.75rem;color:var(--cyan);">
+              <i class="fas fa-{{ 'radar' if 'scan' in act.description.lower() else 'crosshairs' if 'target' in act.description.lower() else 'file' if 'report' in act.description.lower() else 'bell' }}"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.8rem;color:var(--text-primary);">{{ act.description }}</div>
+              <div class="mono" style="font-size:0.65rem;color:var(--text-muted);">
+                {{ act.timestamp.strftime('%Y-%m-%d %H:%M') if act.timestamp else '' }}
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center" style="padding:2rem;color:var(--text-muted);">
+            <i class="fas fa-satellite-dish fa-2x d-block mb-2" style="opacity:0.3;"></i>
+            <div style="font-size:0.8rem;">No activity recorded yet</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

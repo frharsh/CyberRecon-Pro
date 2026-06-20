@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Scan History — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}history{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Scan <span>History</span></h1>
+    <p class="page-subtitle">Complete log of all executed reconnaissance scans</p>
+  </div>
+  <a href="{{ url_for('recon') }}" class="btn-cyber btn-cyan">
+    <i class="fas fa-plus"></i> New Scan
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="glass-card mb-3">
+  <div class="card-body p-3">
+    <form method="GET" class="d-flex gap-3 flex-wrap align-items-end">
+      <div style="flex:1;min-width:200px;">
+        <label class="form-label-cyber">Filter by Target</label>
+        <select name="target_id" class="cyber-select" onchange="this.form.submit()">
+          <option value="">All Targets</option>
+          {% for t in targets %}
+          <option value="{{ t.id }}" {% if request.args.get('target_id')|int == t.id %}selected{% endif %}>
+            {{ t.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label class="form-label-cyber">Filter by Tool</label>
+        <select name="tool" class="cyber-select" onchange="this.form.submit()">
+          <option value="">All Tools</option>
+          {% for tool in ['nmap','subfinder','amass','whatweb','whois','ffuf'] %}
+          <option value="{{ tool }}" {% if request.args.get('tool') == tool %}selected{% endif %}>
+            {{ tool | upper }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label class="form-label-cyber">Filter by Status</label>
+        <select name="status" class="cyber-select" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          {% for s in ['completed','running','failed','pending'] %}
+          <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>
+            {{ s | capitalize }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <a href="{{ url_for('history') }}" class="btn-cyber" style="border-color:var(--border);color:var(--text-muted);">
+          <i class="fas fa-xmark"></i> Clear
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if scans %}
+<div class="glass-card">
+  <div class="card-body p-0">
+    <div style="overflow-x:auto;">
+      <table class="cyber-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Target</th>
+            <th>Tool</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Findings</th>
+            <th>Started</th>
+            <th>Duration</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scans %}
+          <tr>
+            <td class="mono" style="color:var(--text-muted);font-size:0.75rem;">{{ scan.id }}</td>
+            <td>
+              <a href="{{ url_for('target_detail', target_id=scan.target.id) }}"
+                 style="color:var(--cyan);text-decoration:none;font-size:0.85rem;">
+                {{ scan.target.name }}
+              </a>
+            </td>
+            <td><span class="risk-badge risk-info">{{ scan.tool | upper }}</span></td>
+            <td><span class="mono" style="font-size:0.72rem;color:var(--text-muted);">{{ scan.scan_type or '—' }}</span></td>
+            <td>
+              <span class="d-flex align-items-center gap-2">
+                <span class="status-dot {{ scan.status }}"></span>
+                <span style="font-size:0.82rem;">{{ scan.status | capitalize }}</span>
+              </span>
+            </td>
+            <td>
+              <span class="mono" style="color:var(--green);">{{ scan.results.count() }}</span>
+            </td>
+            <td style="font-size:0.78rem;color:var(--text-muted);">
+              {{ scan.started_at.strftime('%Y-%m-%d %H:%M') if scan.started_at else '—' }}
+            </td>
+            <td class="mono" style="font-size:0.75rem;color:var(--text-muted);">
+              {% if scan.completed_at and scan.started_at %}
+                {{ ((scan.completed_at - scan.started_at).total_seconds() | int) }}s
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:0.4rem;">
+                {% if scan.status == 'completed' %}
+                <a href="{{ url_for('recon_results', scan_id=scan.id) }}" class="btn-cyber btn-cyan"
+                   style="padding:0.25rem 0.6rem;font-size:0.7rem;" title="View Results">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a href="{{ url_for('generate_report') }}?scan_id={{ scan.id }}" class="btn-cyber btn-purple"
+                   style="padding:0.25rem 0.6rem;font-size:0.7rem;" title="PDF Report">
+                  <i class="fas fa-file-pdf"></i>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('delete_scan', scan_id=scan.id) }}" class="btn-cyber btn-red"
+                   style="padding:0.25rem 0.6rem;font-size:0.7rem;" title="Delete"
+                   data-confirm="Delete scan #{{ scan.id }} and all its results?">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination (simple) -->
+{% if pagination %}
+<div class="d-flex justify-content-center gap-2 mt-3">
+  {% if pagination.has_prev %}
+  <a href="{{ url_for('history', page=pagination.prev_num, **request.args) }}" class="btn-cyber btn-cyan"
+     style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+    <i class="fas fa-chevron-left"></i> Prev
+  </a>
+  {% endif %}
+  <span class="mono" style="font-size:0.75rem;color:var(--text-muted);align-self:center;">
+    Page {{ pagination.page }} of {{ pagination.pages }}
+  </span>
+  {% if pagination.has_next %}
+  <a href="{{ url_for('history', page=pagination.next_num, **request.args) }}" class="btn-cyber btn-cyan"
+     style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+    Next <i class="fas fa-chevron-right"></i>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="glass-card">
+  <div class="card-body text-center" style="padding:4rem;">
+    <i class="fas fa-clock-rotate-left fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+    <p style="color:var(--text-muted);">No scans found matching your filters.</p>
+    <a href="{{ url_for('recon') }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-radar"></i> Launch First Scan
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

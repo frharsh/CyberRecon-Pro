@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block title %}Recon Engine — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}recon-engine{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Recon <span>Engine</span></h1>
+    <p class="page-subtitle">Execute reconnaissance tools against authorized targets</p>
+  </div>
+</div>
+
+<!-- Legal Banner -->
+<div class="alert-cyber warning mb-4" data-persist="1">
+  <i class="fas fa-gavel"></i>
+  <span>Only run scans against targets you have <strong>explicit written authorization</strong> to test.
+  All scans are logged with timestamps.</span>
+</div>
+
+<div class="row g-3">
+
+  <!-- LEFT: Scan Configuration -->
+  <div class="col-lg-5">
+
+    <div class="glass-card mb-3">
+      <div class="card-body p-4">
+        <div class="section-title">Scan Configuration</div>
+
+        <form id="recon-form" action="{{ url_for('start_scan') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Target -->
+          <div class="mb-3">
+            <label class="form-label-cyber" for="target-select">
+              <i class="fas fa-crosshairs me-1"></i> Target
+            </label>
+            <select id="target-select" name="target_id" class="cyber-select" required>
+              <option value="">— Select Target —</option>
+              {% for t in targets %}
+              <option value="{{ t.id }}"
+                {% if selected_target and selected_target.id == t.id %}selected{% endif %}>
+                {{ t.name }} ({{ t.domain or t.ip_address or 'No domain' }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Tool -->
+          <div class="mb-3">
+            <label class="form-label-cyber" for="tool-select">
+              <i class="fas fa-wrench me-1"></i> Reconnaissance Tool
+            </label>
+            <select id="tool-select" name="tool" class="cyber-select" required>
+              {% for tool_id, tool_name, icon, desc in tools %}
+              <option value="{{ tool_id }}">{{ tool_name }} — {{ desc }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- ── Nmap Options ── -->
+          <div id="nmap-flags" class="tool-option-group mb-3" style="display:none;">
+            <label class="form-label-cyber">Nmap Flags</label>
+            <div class="row g-2">
+              {% set nmap_presets = [
+                ('nmap_flags', '-sV -sC',     '-sV -sC',     'Service + Scripts'),
+                ('nmap_flags', '-sS -p-',     '-sS -p-',     'Stealth + All Ports'),
+                ('nmap_flags', '-sV -A',      '-sV -A',      'Aggressive'),
+                ('nmap_flags', '-sU --top-ports 100', '-sU --top-ports 100', 'UDP Top-100'),
+              ] %}
+              {% for fname, val, label, hint in nmap_presets %}
+              <div class="col-6">
+                <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;
+                              padding:0.5rem;background:var(--bg-input);border:1px solid var(--border-card);
+                              border-radius:var(--radius-sm);font-size:0.75rem;">
+                  <input type="radio" name="{{ fname }}" value="{{ val }}"
+                         {% if loop.first %}checked{% endif %}
+                         style="accent-color:var(--cyan);">
+                  <span>
+                    <div class="mono" style="color:var(--cyan);">{{ label }}</div>
+                    <div style="color:var(--text-muted);font-size:0.65rem;">{{ hint }}</div>
+                  </span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="mt-2">
+              <label class="form-label-cyber">Custom Flags</label>
+              <input type="text" name="nmap_custom" class="cyber-input" placeholder="-sV -p 80,443,8080">
+            </div>
+          </div>
+
+          <!-- ── Subfinder Options ── -->
+          <div id="subfinder-options" class="tool-option-group mb-3" style="display:none;">
+            <label class="form-label-cyber">Subfinder Options</label>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;color:var(--text-secondary);">
+                <input type="checkbox" name="subfinder_recursive" value="1" style="accent-color:var(--cyan);">
+                Recursive enumeration
+              </label>
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;color:var(--text-secondary);">
+                <input type="checkbox" name="subfinder_silent" value="1" checked style="accent-color:var(--cyan);">
+                Silent mode
+              </label>
+            </div>
+          </div>
+
+          <!-- ── Amass Options ── -->
+          <div id="amass-options" class="tool-option-group mb-3" style="display:none;">
+            <label class="form-label-cyber">Amass Mode</label>
+            <select name="amass_mode" class="cyber-select">
+              <option value="passive">Passive (no direct contact)</option>
+              <option value="active">Active (DNS brute-force)</option>
+              <option value="intel">Intel (whois, certificates)</option>
+            </select>
+          </div>
+
+          <!-- ── FFUF Options ── -->
+          <div id="ffuf-options" class="tool-option-group mb-3" style="display:none;">
+            <div class="mb-2">
+              <label class="form-label-cyber">Wordlist</label>
+              <select name="ffuf_wordlist" class="cyber-select">
+                <option value="common">common.txt (4k words)</option>
+                <option value="directory-list-2.3-medium">directory-list-medium (220k)</option>
+                <option value="big">big.txt (20k words)</option>
+                <option value="custom">Custom path</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label-cyber">Extensions</label>
+              <input type="text" name="ffuf_extensions" class="cyber-input"
+                     placeholder="php,html,txt,js" value="php,html,txt">
+            </div>
+          </div>
+
+          <!-- ── WhatWeb Options ── -->
+          <div id="whatweb-options" class="tool-option-group mb-3" style="display:none;">
+            <label class="form-label-cyber">Aggression Level</label>
+            <select name="whatweb_level" class="cyber-select">
+              <option value="1">Level 1 — Passive (no extra requests)</option>
+              <option value="3" selected>Level 3 — Balanced</option>
+              <option value="4">Level 4 — Aggressive</option>
+            </select>
+          </div>
+
+          <!-- ── Whois Options ── -->
+          <div id="whois-options" class="tool-option-group mb-3" style="display:none;">
+            <label class="form-label-cyber">Additional Lookups</label>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;color:var(--text-secondary);">
+                <input type="checkbox" name="dns_lookup" value="1" checked style="accent-color:var(--cyan);">
+                DNS Lookup (nslookup)
+              </label>
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;color:var(--text-secondary);">
+                <input type="checkbox" name="axfr_test" value="1" style="accent-color:var(--cyan);">
+                AXFR Zone Transfer Test
+              </label>
+            </div>
+          </div>
+
+          <!-- Hidden active scan -->
+          <input type="hidden" id="active-scan-id" value="">
+
+          <!-- Action Buttons -->
+          <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+            <button type="button" id="btn-start-scan" class="btn-cyber btn-solid-cyan" style="flex:1;justify-content:center;padding:0.7rem;">
+              <i class="fas fa-play me-2"></i> Start Scan
+            </button>
+            <button type="button" id="btn-stop-scan" class="btn-cyber btn-red" style="flex:1;justify-content:center;padding:0.7rem;display:none;">
+              <i class="fas fa-stop me-2"></i> Stop
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Tool Status -->
+    <div class="glass-card">
+      <div class="card-body p-3">
+        <div class="section-title">Tool Availability</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          {% for tool_id, tool_name, icon, desc in tools %}
+          <div class="tool-status-card {% if tool_status.get(tool_id) %}available{% else %}missing{% endif %}">
+            <i class="fas {{ icon }}" style="width:16px;color:{% if tool_status.get(tool_id) %}var(--green){% else %}var(--red){% endif %};"></i>
+            <span style="flex:1;font-size:0.78rem;color:var(--text-primary);">{{ tool_name }}</span>
+            <span class="risk-badge {% if tool_status.get(tool_id) %}risk-low{% else %}risk-critical{% endif %}">
+              {% if tool_status.get(tool_id) %}READY{% else %}MISSING{% endif %}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Terminal Output + Recent -->
+  <div class="col-lg-7">
+
+    <!-- Terminal -->
+    <div class="glass-card mb-3">
+      <div class="card-body p-0">
+        <div class="p-3 pb-0" style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="section-title mb-0">Live Terminal Output</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span id="scan-status-badge" class="risk-badge risk-info">IDLE</span>
+            <button onclick="document.getElementById('terminal-output').innerHTML=''; document.getElementById('terminal-output').innerHTML='';"
+                    class="btn-cyber" style="padding:0.2rem 0.5rem;font-size:0.7rem;border-color:var(--border);color:var(--text-muted);">
+              <i class="fas fa-eraser"></i> Clear
+            </button>
+          </div>
+        </div>
+        <div class="p-3">
+          <div class="scan-progress mb-2">
+            <div class="scan-progress-bar" id="scan-progress-bar" style="width:0%;animation:none;transition:width 0.3s;"></div>
+          </div>
+          <div class="terminal">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <div class="terminal-dot red"></div>
+                <div class="terminal-dot yellow"></div>
+                <div class="terminal-dot green"></div>
+              </div>
+              <span class="terminal-title">cyberrecon@ops:~$ ./recon.py</span>
+            </div>
+            <div class="terminal-body" id="terminal-output" style="min-height:320px;">
+              <span class="terminal-line info">[*] CyberRecon Pro v1.0 — Recon Engine Ready</span><br>
+              <span class="terminal-line info">[*] Select a target and tool, then click Start Scan</span><br>
+              <span class="terminal-line default">[~] All activities are logged for audit purposes</span><br>
+              <span class="terminal-cursor"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent scans this session -->
+    {% if recent_scans %}
+    <div class="glass-card">
+      <div class="card-body p-3">
+        <div class="section-title">Recent Scans</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          {% for scan in recent_scans[:5] %}
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem;
+                      background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-sm);">
+            <span class="status-dot {{ scan.status }}"></span>
+            <span class="mono" style="font-size:0.75rem;color:var(--cyan);width:80px;">{{ scan.tool | upper }}</span>
+            <span style="flex:1;font-size:0.8rem;color:var(--text-secondary);">{{ scan.target.name }}</span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">{{ scan.results.count() }} findings</span>
+            {% if scan.status == 'completed' %}
+            <a href="{{ url_for('recon_results', scan_id=scan.id) }}" class="btn-cyber btn-cyan"
+               style="padding:0.2rem 0.5rem;font-size:0.7rem;">
+              <i class="fas fa-eye"></i>
+            </a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/recon.js') }}"></script>
+{% endblock %}

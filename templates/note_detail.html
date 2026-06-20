@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ note.title }} — Notes — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}notes / {{ note.title[:30] }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div style="flex:1;min-width:0;">
+    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+      <span class="risk-badge {% if note.priority == 'critical' %}risk-critical{% elif note.priority == 'high' %}risk-high{% elif note.priority == 'medium' %}risk-medium{% else %}risk-low{% endif %}">
+        {{ note.priority | upper }}
+      </span>
+      <span class="risk-badge risk-info">{{ note.note_type | upper }}</span>
+      {% if note.target %}
+      <span style="font-size:0.75rem;color:var(--text-muted);">
+        <i class="fas fa-crosshairs me-1" style="color:var(--cyan);"></i>{{ note.target.name }}
+      </span>
+      {% endif %}
+    </div>
+    <h1 class="page-title">{{ note.title }}</h1>
+    <p class="page-subtitle mono">
+      Created {{ note.created_at.strftime('%Y-%m-%d %H:%M') if note.created_at else '' }}
+      {% if note.updated_at and note.updated_at != note.created_at %}
+       · Updated {{ note.updated_at.strftime('%Y-%m-%d %H:%M') }}
+      {% endif %}
+    </p>
+  </div>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('add_note') }}?edit={{ note.id }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-pen"></i> Edit
+    </a>
+    <a href="{{ url_for('delete_note', note_id=note.id) }}" class="btn-cyber btn-red"
+       data-confirm="Delete note '{{ note.title }}'?">
+      <i class="fas fa-trash"></i>
+    </a>
+    <a href="{{ url_for('notes') }}" class="btn-cyber" style="border-color:var(--border);color:var(--text-secondary);">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <!-- Content -->
+    <div class="glass-card">
+      <div class="card-body p-4">
+        <div id="note-rendered" style="color:var(--text-secondary);line-height:1.9;font-size:0.9rem;">
+          {{ note.content | e | replace('\n', '<br>') | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Meta card -->
+    <div class="glass-card mb-3">
+      <div class="card-body p-3">
+        <div class="section-title">Details</div>
+        <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid var(--border-card);">
+            <td style="padding:0.5rem 0;color:var(--text-muted);">Priority</td>
+            <td style="padding:0.5rem 0;">
+              <span class="risk-badge {% if note.priority == 'critical' %}risk-critical{% elif note.priority == 'high' %}risk-high{% elif note.priority == 'medium' %}risk-medium{% else %}risk-low{% endif %}">
+                {{ note.priority | upper }}
+              </span>
+            </td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-card);">
+            <td style="padding:0.5rem 0;color:var(--text-muted);">Type</td>
+            <td style="padding:0.5rem 0;color:var(--text-primary);">{{ note.note_type | capitalize }}</td>
+          </tr>
+          {% if note.target %}
+          <tr style="border-bottom:1px solid var(--border-card);">
+            <td style="padding:0.5rem 0;color:var(--text-muted);">Target</td>
+            <td style="padding:0.5rem 0;">
+              <a href="{{ url_for('target_detail', target_id=note.target.id) }}"
+                 style="color:var(--cyan);text-decoration:none;font-size:0.8rem;">
+                {{ note.target.name }}
+              </a>
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td style="padding:0.5rem 0;color:var(--text-muted);">Created</td>
+            <td style="padding:0.5rem 0;color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;">
+              {{ note.created_at.strftime('%Y-%m-%d %H:%M') if note.created_at else '—' }}
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    {% if note.tags %}
+    <div class="glass-card mb-3">
+      <div class="card-body p-3">
+        <div class="section-title">Tags</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          {% for tag in note.tags.split(',') %}
+          {% if tag.strip() %}
+          <span class="note-tag">{{ tag.strip() }}</span>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Copy raw -->
+    <div class="glass-card">
+      <div class="card-body p-3">
+        <div class="section-title">Export</div>
+        <button class="btn-cyber btn-cyan w-100 justify-content-center mb-2"
+                data-copy="{{ note.content }}" style="font-size:0.8rem;">
+          <i class="fas fa-copy me-1"></i> Copy Content
+        </button>
+        <a href="{{ url_for('notes') }}?target_id={{ note.target_id or '' }}"
+           class="btn-cyber w-100 justify-content-center" style="font-size:0.8rem;border-color:var(--border);color:var(--text-secondary);">
+          <i class="fas fa-list me-1"></i> All Notes
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

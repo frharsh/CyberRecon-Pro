@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ target.name }} — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}targets / {{ target.name }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><span>{{ target.name }}</span></h1>
+    <p class="page-subtitle mono">{{ target.domain or target.ip_address or 'No domain/IP set' }}</p>
+  </div>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('recon') }}?target_id={{ target.id }}" class="btn-cyber btn-purple">
+      <i class="fas fa-radar"></i> Launch Scan
+    </a>
+    <a href="{{ url_for('edit_target', target_id=target.id) }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-pen"></i> Edit
+    </a>
+    <a href="{{ url_for('targets') }}" class="btn-cyber" style="border-color:var(--border);color:var(--text-secondary);">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Left: Target Info -->
+  <div class="col-lg-4">
+
+    <!-- Info Card -->
+    <div class="glass-card mb-3">
+      <div class="card-body p-3">
+        <div class="section-title">Target Information</div>
+        <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+          {% set rows = [
+            ('Domain',     target.domain or '—',       'fa-globe'),
+            ('IP Address', target.ip_address or '—',   'fa-server'),
+            ('Status',     target.status | capitalize,  'fa-circle-dot'),
+            ('Type',       target.target_type or '—',   'fa-tag'),
+            ('Bug Bounty', 'Yes' if target.bug_bounty else 'No', 'fa-bug'),
+            ('Added',      target.created_at.strftime('%Y-%m-%d') if target.created_at else '—', 'fa-calendar'),
+          ] %}
+          {% for label, value, icon in rows %}
+          <tr style="border-bottom:1px solid var(--border-card);">
+            <td style="padding:0.6rem 0;color:var(--text-muted);width:40%;">
+              <i class="fas {{ icon }} me-2" style="width:14px;color:var(--cyan);"></i>{{ label }}
+            </td>
+            <td style="padding:0.6rem 0;color:var(--text-primary);font-family:var(--font-mono);">
+              {{ value }}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+
+        {% if target.description %}
+        <div class="mt-3" style="font-size:0.8rem;color:var(--text-muted);">
+          <div class="form-label-cyber">Description</div>
+          {{ target.description }}
+        </div>
+        {% endif %}
+
+        {% if target.scope %}
+        <div class="mt-3">
+          <div class="form-label-cyber">Scope</div>
+          <div class="terminal" style="font-size:0.75rem;">
+            <div class="terminal-body" style="min-height:auto;padding:0.6rem 0.8rem;max-height:120px;">
+              {{ target.scope | e | replace('\n', '<br>') | safe }}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if target.out_of_scope %}
+        <div class="mt-3">
+          <div class="form-label-cyber" style="color:var(--red);">Out of Scope</div>
+          <div class="terminal" style="font-size:0.75rem;border-color:rgba(255,51,102,0.2);">
+            <div class="terminal-body" style="min-height:auto;padding:0.6rem 0.8rem;max-height:80px;color:var(--red);">
+              {{ target.out_of_scope | e | replace('\n', '<br>') | safe }}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick Screenshot -->
+    {% if target.domain %}
+    <div class="glass-card mb-3">
+      <div class="card-body p-3">
+        <div class="section-title">Quick Actions</div>
+        <form method="POST" action="{{ url_for('capture_screenshot') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="target_id" value="{{ target.id }}">
+          <input type="hidden" name="url" value="http://{{ target.domain }}">
+          <button type="submit" class="btn-cyber btn-cyan w-100 justify-content-center mb-2">
+            <i class="fas fa-camera"></i> Capture Screenshot
+          </button>
+        </form>
+        <a href="{{ url_for('notes') }}?target_id={{ target.id }}" class="btn-cyber btn-purple w-100 justify-content-center">
+          <i class="fas fa-plus"></i> Add Note
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: Scans + Notes -->
+  <div class="col-lg-8">
+
+    <!-- Scan History -->
+    <div class="glass-card mb-3">
+      <div class="card-body p-0">
+        <div class="p-3" style="border-bottom:1px solid var(--border);">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="section-title mb-0">Scan History ({{ scans | length }})</div>
+            <a href="{{ url_for('recon') }}?target_id={{ target.id }}" class="btn-cyber btn-cyan"
+               style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+              <i class="fas fa-plus"></i> New Scan
+            </a>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="cyber-table">
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Scan Type</th>
+                <th>Status</th>
+                <th>Findings</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for scan in scans %}
+              <tr>
+                <td><span class="risk-badge risk-info">{{ scan.tool | upper }}</span></td>
+                <td><span class="mono" style="font-size:0.75rem;">{{ scan.scan_type or 'standard' }}</span></td>
+                <td>
+                  <span class="d-flex align-items-center gap-2">
+                    <span class="status-dot {{ scan.status }}"></span>
+                    {{ scan.status | capitalize }}
+                  </span>
+                </td>
+                <td><span class="mono" style="color:var(--cyan);">{{ scan.results.count() }}</span></td>
+                <td style="font-size:0.75rem;">
+                  {{ scan.started_at.strftime('%m/%d/%Y %H:%M') if scan.started_at else '—' }}
+                </td>
+                <td>
+                  <div style="display:flex;gap:0.4rem;">
+                    {% if scan.status == 'completed' %}
+                    <a href="{{ url_for('recon_results', scan_id=scan.id) }}" class="btn-cyber btn-cyan"
+                       style="padding:0.2rem 0.5rem;font-size:0.7rem;">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('delete_scan', scan_id=scan.id) }}" class="btn-cyber btn-red"
+                       style="padding:0.2rem 0.5rem;font-size:0.7rem;"
+                       data-confirm="Delete this scan and all its results?">
+                      <i class="fas fa-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center" style="padding:1.5rem;color:var(--text-muted);">
+                  No scans yet for this target.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="glass-card">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="section-title mb-0">Notes ({{ notes | length }})</div>
+          <a href="{{ url_for('add_note') }}?target_id={{ target.id }}" class="btn-cyber btn-purple"
+             style="padding:0.3rem 0.75rem;font-size:0.75rem;">
+            <i class="fas fa-plus"></i> Add Note
+          </a>
+        </div>
+        {% if notes %}
+        <div class="row g-2">
+          {% for note in notes %}
+          <div class="col-md-6">
+            <div class="note-card" data-href="{{ url_for('note_detail', note_id=note.id) }}">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="note-title">{{ note.title }}</div>
+                <span class="risk-badge {% if note.priority == 'critical' %}risk-critical{% elif note.priority == 'high' %}risk-high{% elif note.priority == 'medium' %}risk-medium{% else %}risk-low{% endif %}">
+                  {{ note.priority | upper }}
+                </span>
+              </div>
+              <div class="note-preview">{{ note.content }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center" style="padding:1.5rem;color:var(--text-muted);font-size:0.85rem;">
+          No notes for this target yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

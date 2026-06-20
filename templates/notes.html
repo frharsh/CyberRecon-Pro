@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Notes — CyberRecon Pro{% endblock %}
+{% block breadcrumb %}notes{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Security <span>Notes</span></h1>
+    <p class="page-subtitle">Analyst notes, findings documentation, and observations</p>
+  </div>
+  <a href="{{ url_for('add_note') }}" class="btn-cyber btn-cyan">
+    <i class="fas fa-plus"></i> New Note
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <div style="flex:1;min-width:200px;max-width:300px;">
+    <input type="text" id="inline-search" class="cyber-input" placeholder="Search notes..."
+           style="padding-left:2.5rem;position:relative;">
+  </div>
+  <div style="min-width:160px;">
+    <select class="cyber-select" id="priority-filter">
+      <option value="">All Priorities</option>
+      <option value="critical">Critical</option>
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+  </div>
+</div>
+
+{% if notes %}
+<div class="row g-3" id="notes-grid">
+  {% for note in notes %}
+  <div class="col-md-6 col-xl-4" data-searchable="{{ note.title }} {{ note.content[:100] }}"
+       data-priority="{{ note.priority }}">
+    <div class="note-card" data-href="{{ url_for('note_detail', note_id=note.id) }}">
+
+      <div class="d-flex align-items-start justify-content-between mb-2 gap-2">
+        <div class="note-title">{{ note.title }}</div>
+        <span class="risk-badge {% if note.priority == 'critical' %}risk-critical{% elif note.priority == 'high' %}risk-high{% elif note.priority == 'medium' %}risk-medium{% else %}risk-low{% endif %}" style="flex-shrink:0;">
+          {{ note.priority | upper }}
+        </span>
+      </div>
+
+      <div class="note-preview mb-3">{{ note.content }}</div>
+
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        {% if note.target %}
+        <span style="font-size:0.7rem;color:var(--text-muted);">
+          <i class="fas fa-crosshairs me-1" style="color:var(--cyan);"></i>{{ note.target.name }}
+        </span>
+        {% endif %}
+        {% if note.tags %}
+          {% for tag in note.tags.split(',')[:3] %}
+            <span class="note-tag">{{ tag.strip() }}</span>
+          {% endfor %}
+        {% endif %}
+        <span style="margin-left:auto;font-size:0.68rem;color:var(--text-muted);font-family:var(--font-mono);">
+          {{ note.created_at.strftime('%m/%d/%Y') if note.created_at else '' }}
+        </span>
+      </div>
+
+      <div class="d-flex gap-2 mt-2" style="padding-top:0.6rem;border-top:1px solid var(--border-card);">
+        <a href="{{ url_for('note_detail', note_id=note.id) }}" class="btn-cyber btn-cyan"
+           style="padding:0.25rem 0.6rem;font-size:0.72rem;flex:1;justify-content:center;"
+           onclick="event.stopPropagation();">
+          <i class="fas fa-eye"></i> View
+        </a>
+        <a href="{{ url_for('delete_note', note_id=note.id) }}" class="btn-cyber btn-red"
+           style="padding:0.25rem 0.6rem;font-size:0.72rem;"
+           data-confirm="Delete note '{{ note.title }}'?"
+           onclick="event.stopPropagation();">
+          <i class="fas fa-trash"></i>
+        </a>
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="glass-card">
+  <div class="card-body text-center" style="padding:4rem;">
+    <i class="fas fa-file-shield fa-3x mb-3" style="color:var(--text-muted);opacity:0.3;"></i>
+    <p style="color:var(--text-muted);">No notes yet. Start documenting your findings.</p>
+    <a href="{{ url_for('add_note') }}" class="btn-cyber btn-cyan">
+      <i class="fas fa-plus"></i> Create First Note
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('priority-filter')?.addEventListener('change', function () {
+  const filter = this.value;
+  document.querySelectorAll('#notes-grid > div').forEach(card => {
+    card.style.display = (!filter || card.dataset.priority === filter) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Register — CyberRecon Pro{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card animate-fade-up" style="max-width:480px;">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <i class="fas fa-user-plus" style="color:var(--purple);"></i>
+      </div>
+      <div class="auth-title" style="color:var(--purple);">REGISTER</div>
+      <div class="auth-subtitle">Create Analyst Account</div>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}" id="register-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label class="form-label-cyber" for="username">
+          <i class="fas fa-user me-1"></i> Username
+        </label>
+        <input type="text" id="username" name="username" class="cyber-input"
+               placeholder="analyst_name" required minlength="3" maxlength="30"
+               pattern="[a-zA-Z0-9_]{3,30}" autocomplete="username">
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.25rem;font-family:var(--font-mono);">
+          3–30 chars, letters/numbers/underscore only
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label-cyber" for="email">
+          <i class="fas fa-envelope me-1"></i> Email
+        </label>
+        <input type="email" id="email" name="email" class="cyber-input"
+               placeholder="analyst@organization.com" required autocomplete="email">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label-cyber" for="password">
+          <i class="fas fa-lock me-1"></i> Password
+        </label>
+        <div style="position:relative;">
+          <input type="password" id="password" name="password" class="cyber-input"
+                 placeholder="••••••••••••" required minlength="8"
+                 style="padding-right:2.8rem;" autocomplete="new-password">
+          <button type="button" id="toggle-pw"
+                  style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);
+                         background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <!-- Strength meter -->
+        <div class="scan-progress mt-2" style="height:3px;">
+          <div class="scan-progress-bar" id="pw-strength-bar" style="width:0%;animation:none;background:var(--green);"></div>
+        </div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.2rem;font-family:var(--font-mono);" id="pw-strength-label"></div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label-cyber" for="confirm_password">
+          <i class="fas fa-lock-open me-1"></i> Confirm Password
+        </label>
+        <input type="password" id="confirm_password" name="confirm_password" class="cyber-input"
+               placeholder="••••••••••••" required autocomplete="new-password">
+      </div>
+
+      <!-- Legal checkbox -->
+      <div class="mb-4" style="display:flex;align-items:flex-start;gap:0.75rem;">
+        <input type="checkbox" id="agree" name="agree" required
+               style="margin-top:0.25rem;accent-color:var(--cyan);">
+        <label for="agree" style="font-size:0.78rem;color:var(--text-secondary);cursor:pointer;">
+          I confirm I will only use CyberRecon Pro for authorized security testing.
+          I agree to the <a href="{{ url_for('disclaimer') }}" target="_blank" style="color:var(--cyan);">Legal Disclaimer</a>.
+        </label>
+      </div>
+
+      <button type="submit" class="btn-cyber btn-purple w-100 justify-content-center"
+              style="padding:0.75rem;" id="btn-register">
+        <i class="fas fa-user-shield me-2"></i> CREATE ACCOUNT
+      </button>
+
+    </form>
+
+    <div class="text-center mt-3" style="font-size:0.8rem; color:var(--text-muted);">
+      Already have an account?
+      <a href="{{ url_for('login') }}" style="color:var(--cyan); text-decoration:none;">Sign in</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Password toggle
+  document.getElementById('toggle-pw')?.addEventListener('click', function () {
+    const pw = document.getElementById('password');
+    const icon = this.querySelector('i');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+    icon.className = pw.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  });
+
+  // Password strength meter
+  const pwInput   = document.getElementById('password');
+  const bar       = document.getElementById('pw-strength-bar');
+  const label     = document.getElementById('pw-strength-label');
+  const strengthColors = ['var(--red)', 'var(--orange)', 'var(--yellow)', 'var(--cyan)', 'var(--green)'];
+  const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+
+  pwInput?.addEventListener('input', function () {
+    const pw = this.value;
+    let score = 0;
+    if (pw.length >= 8)  score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    score = Math.min(score, 4);
+    bar.style.width  = `${(score + 1) * 20}%`;
+    bar.style.background = strengthColors[score];
+    label.textContent = pw.length ? strengthLabels[score] : '';
+    label.style.color = strengthColors[score];
+  });
+
+  // Match validation
+  document.getElementById('register-form')?.addEventListener('submit', function (e) {
+    const pw  = document.getElementById('password').value;
+    const cpw = document.getElementById('confirm_password').value;
+    if (pw !== cpw) {
+      e.preventDefault();
+      window.CyberToast?.error('Passwords do not match!');
+      return;
+    }
+    const btn = document.getElementById('btn-register');
+    btn.innerHTML = '<span class="spinner-cyber me-2" style="width:16px;height:16px;border-width:2px;display:inline-block;"></span> Creating...';
+    btn.disabled = true;
+  });
+});
+</script>
+{% endblock %}
