@@ -121,5 +121,5 @@ This tool is designed to assist security professionals in authorized vulnerabili
 ---
 
 <div align="center">
-  <i>Developed with ❤️ by Harsh Jadhav</i>
+  <i>Developed with  by Harsh Jadhav👾</i>
 </div>
